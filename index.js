@@ -39,6 +39,18 @@ app.post('/api/users', bodyParser.urlencoded(), (req, res) => {
   });
 });
 
+app.get('/api/users', async (req, res) => {
+  console.log("get users");
+  const arrOfUsers = await UserModel.find()
+  .then((data) => {
+    return data;
+  })
+  .catch(err => {
+    return res.json({ error: "no match found" });
+  });
+  console.log("return array of objects");
+  return res.json(arrOfUsers);
+});
 
 
 const listener = app.listen(process.env.PORT || 3000, () => {
