@@ -28,6 +28,10 @@ app.post('/api/users', bodyParser.urlencoded(), (req, res) => {
     username: req.body.username,
   });
   newUser.save({isNew: true})
+  .then()
+  .catch((err) => {
+    return res.json({error: err});
+  });
 });
 
 
