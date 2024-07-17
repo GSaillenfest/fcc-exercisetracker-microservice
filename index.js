@@ -9,7 +9,7 @@ require('dotenv').config();
 mongoose.connect(process.env.MONGO_URI);
 const Schema = mongoose.Schema;
 const UserSchema = new Schema({
-  username: {type: String, required: true, unique: true},
+  username: {type: String, required: true},
 });
 const UserModel = mongoose.model('UserModel', UserSchema);
 
@@ -27,8 +27,13 @@ app.post('/api/users', bodyParser.urlencoded(), (req, res) => {
   const newUser = new UserModel({
     username: req.body.username,
   });
-  newUser.save({isNew: true})
-  .then()
+  newUser.save()
+  .then((data) => {
+    return res.json({
+      username: data.username,
+      _id: data._id.toString(),
+    });
+  })
   .catch((err) => {
     return res.json({error: err});
   });
