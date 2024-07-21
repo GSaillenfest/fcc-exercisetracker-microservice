@@ -7,6 +7,7 @@ require('dotenv').config();
 
 //connect to database
 mongoose.connect(process.env.MONGO_URI);
+
 const Schema = mongoose.Schema;
 //user schema
 const UserSchema = new Schema({
@@ -19,7 +20,7 @@ const ExerciseSchema = new Schema({
   description: {type: String, required: true},
   duration: {type: Number, required: true},
   date: {type: String, required: true},
-  _id_: {type: String, required: true},
+  userId: {type: String, required: true},
 })
 const Exercise = mongoose.model('Exercise', ExerciseSchema);
 
@@ -30,6 +31,7 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
 
+//create and save new user
 app.post('/api/users', bodyParser.urlencoded(), (req, res) => {
   //get username from post form
   console.log(req.body.username);
@@ -49,8 +51,9 @@ app.post('/api/users', bodyParser.urlencoded(), (req, res) => {
   });
 });
 
+//return list of all users
 app.get('/api/users', async (req, res) => {
-  console.log("get users");
+  //get users
   const arrOfUsers = await UserModel.find()
   .then((data) => {
     return data;
@@ -62,6 +65,7 @@ app.get('/api/users', async (req, res) => {
   return res.json(arrOfUsers);
 });
 
+//create and save new exercise linked to a user's id
 app.post('/api/users/:_id/exercises', bodyParser.urlencoded(), async (req, res) => {
   //get _id
   const userId = req.params._id;
@@ -86,7 +90,7 @@ app.post('/api/users/:_id/exercises', bodyParser.urlencoded(), async (req, res) 
     description: description,
     duration: duration,
     date: date,
-    _id_: userId,
+    userId: userId,
   })
   //add to database
   await newExercise.save()
@@ -96,12 +100,36 @@ app.post('/api/users/:_id/exercises', bodyParser.urlencoded(), async (req, res) 
       description: data.description,
       duration: data.duration,
       date: data.date,
-      _id: data._id_,
+      _id: data.userId,
     })
   })
   .catch((err) => { return console.log("can't add document: " + err) })
 })
 
+//return list of exercises linked to user
+app.get('/api/users/:_id/logs', async (req, res) => {
+  //
+  const userId = req.params._id;
+  const arrOfExercises = await Exercise.find({userId: userId})
+  .then((data) => {
+    return res.json({
+      username: data[0].username,
+      count: data.length,
+      _id: data[0].userId,
+      log: data.map((el) => {
+            return {
+              description: el.description,
+              duration: el.duration,
+              date: el.date,
+            };
+      })
+    });
+  })
+  .catch((err) => { 
+    console.log("error returning array of exercises"); 
+    return res.json({ error: "No exercise found, error: " + err }); 
+  });
+});
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on port ' + listener.address().port)
