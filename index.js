@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const moment = require('moment');
 require('dotenv').config();
 
 //connect to database
@@ -19,7 +20,7 @@ const ExerciseSchema = new Schema({
   username: {type: String, required: true},
   description: {type: String, required: true},
   duration: {type: Number, required: true},
-  date: {type: String, required: true},
+  date: {type: Date, required: true},
   userId: {type: String, required: true},
 })
 const Exercise = mongoose.model('Exercise', ExerciseSchema);
@@ -80,7 +81,7 @@ app.post('/api/users/:_id/exercises', bodyParser.urlencoded(), async (req, res) 
   const duration = Number(req.body.duration);
   let date;
   try {
-    date = req.body.date ? new Date(req.body.date).toDateString() : new Date().toDateString();
+    date = req.body.date ? moment(new Date(req.body.date)).format('YYYY-MM-DD[T00:00:00.000Z]') : moment(new Date()).format('YYYY-MM-DD[T00:00:00.000Z]');
   }
   catch {err => { return res.json({ date_error: err })}};
   
@@ -92,14 +93,14 @@ app.post('/api/users/:_id/exercises', bodyParser.urlencoded(), async (req, res) 
     date: date,
     userId: userId,
   })
-  //add to database
+  //add to database and return json object
   await newExercise.save()
   .then((data) => {
     return res.json({
       username: data.username,
       description: data.description,
       duration: data.duration,
-      date: data.date,
+      date: data.date.toDateString(),
       _id: data.userId,
     })
   })
@@ -108,9 +109,35 @@ app.post('/api/users/:_id/exercises', bodyParser.urlencoded(), async (req, res) 
 
 //return list of exercises linked to user
 app.get('/api/users/:_id/logs', async (req, res) => {
-  //
   const userId = req.params._id;
-  const arrOfExercises = await Exercise.find({userId: userId})
+  const { from, to, limit = 0} = req.query;
+
+  //convert limit to an integer
+  const parsedLimit = parseInt(limit, 10);
+
+  //check if parsedLimit is a positive integer
+  if (isNaN(parsedLimit) || parsedLimit < 0) {
+    return res.json({ error: 'Invalid limit value. Please provide a positive integer.' });
+  }
+
+  console.log(new Date(from).toDateString (), to);
+  const arrOfExercises = await Exercise.find({
+    userId: userId, 
+    //conditional filter
+    ...(from ? {
+        date: {
+          $gte: moment(new Date(from)).format('YYYY-MM-DD[T00:00:00.000Z]'),
+        }
+        } : {}
+      ),
+  ...(to ? {
+        date : {
+          $lt: moment(new Date(to)).format('YYYY-MM-DD[T00:00:00.000Z]')
+        }
+      } : {}
+      )
+  })
+  .limit(limit)
   .then((data) => {
     return res.json({
       username: data[0].username,
@@ -120,13 +147,12 @@ app.get('/api/users/:_id/logs', async (req, res) => {
             return {
               description: el.description,
               duration: el.duration,
-              date: el.date,
+              date: el.date.toDateString(),
             };
       })
     });
   })
   .catch((err) => { 
-    console.log("error returning array of exercises"); 
     return res.json({ error: "No exercise found, error: " + err }); 
   });
 });
