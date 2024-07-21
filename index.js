@@ -34,8 +34,6 @@ app.get('/', (req, res) => {
 
 //create and save new user
 app.post('/api/users', bodyParser.urlencoded(), (req, res) => {
-  //get username from post form
-  console.log(req.body.username);
   //add username to database
   const newUser = new UserModel({
     username: req.body.username,
@@ -62,7 +60,6 @@ app.get('/api/users', async (req, res) => {
   .catch(err => {
     return res.json({ error: "no match found" });
   });
-  console.log("return array of objects");
   return res.json(arrOfUsers);
 });
 
@@ -120,7 +117,6 @@ app.get('/api/users/:_id/logs', async (req, res) => {
     return res.json({ error: 'Invalid limit value. Please provide a positive integer.' });
   }
 
-  console.log(new Date(from).toDateString (), to);
   const arrOfExercises = await Exercise.find({
     userId: userId, 
     //conditional filter
